@@ -21,6 +21,8 @@ void processInput(GLFWwindow *window);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+const int GRID_SIZE = 10;
+const float GRID_SPACING = 1.0f;
 
 int main()
 {
@@ -50,21 +52,65 @@ int main()
     }
 
     // Create and compile shaders
-    Shader particleShader("/Users/sid/Documents/Workspace/DungeonPlanner/src/shaders/vertex.glsl", "/Users/sid/Documents/Workspace/DungeonPlanner/src/shaders/fragment.glsl");
+    Shader gridShader("/Users/sid/Documents/Workspace/DungeonPlanner/src/shaders/vertex.glsl", "/Users/sid/Documents/Workspace/DungeonPlanner/src/shaders/fragment.glsl");
+
+    // VBO and VAO
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    std::vector<float> vertices;
+    for (int i = 0; i <= GRID_SIZE; ++i)
+    {
+        // Horizontal lines
+        vertices.push_back(-GRID_SIZE / 2.0f);
+        vertices.push_back(i - GRID_SIZE / 2.0f);
+        vertices.push_back(GRID_SIZE / 2.0f);
+        vertices.push_back(i - GRID_SIZE / 2.0f);
+
+        // Vertical lines
+        vertices.push_back(i - GRID_SIZE / 2.0f);
+        vertices.push_back(-GRID_SIZE / 2.0f);
+        vertices.push_back(i - GRID_SIZE / 2.0f);
+        vertices.push_back(GRID_SIZE / 2.0f);
+    }
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Unbind
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glm::mat4 projection = glm::ortho(-GRID_SIZE / 2.0f, GRID_SIZE / 2.0f, -GRID_SIZE / 2.0f, GRID_SIZE / 2.0f);
 
     // Render loop
     while (!glfwWindowShouldClose(window)) {
-        // Input
         processInput(window);
 
-        // Render
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set the clear color
-        glClear(GL_COLOR_BUFFER_BIT);         // Clear the color buffer
+        // black out screen
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        gridShader.use();
+        gridShader.setMat4("projection", projection);
+
+        // Draw grid
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_LINES, 0, vertices.size() / 2);
 
         // Swap buffers and poll IO events
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Cleanup
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
 
     glfwTerminate();
     return 0;
