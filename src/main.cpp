@@ -5,6 +5,9 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
+#include <filesystem>
+#include <iostream>
+
 #include "shader.h"
 
 #include <glm/glm.hpp>
@@ -14,6 +17,8 @@
 #include <vector>
 #include <cmath>
 #include <random>
+
+namespace fs = std::filesystem;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -51,8 +56,10 @@ int main()
         return -1;
     }
 
-    // Create and compile shaders
-    Shader gridShader("/Users/sid/Documents/Workspace/DungeonPlanner/src/shaders/vertex.glsl", "/Users/sid/Documents/Workspace/DungeonPlanner/src/shaders/fragment.glsl");
+    // Get relative path 
+    fs::path projectRoot = fs::current_path();
+    // Create and compile shaders. First concatenate paths, then convert to string via .c_str
+    Shader gridShader((projectRoot / "src/shaders/vertex.glsl").c_str(), (projectRoot / "src/shaders/fragment.glsl").c_str());
 
     // VBO and VAO
     unsigned int VAO, VBO;
