@@ -9,8 +9,6 @@ A minimal D&D dungeon mapper in C++.
 
 ## Build
 
-Change the main shader paths in main.cpp and use absolute pathing. To build yourself, run:
-
 ```bash
 cmake .
 make
