@@ -10,7 +10,7 @@ A minimal D&D dungeon mapper in C++.
 ## Build
 
 ```bash
-cmake .
+cmake
 make
 ./DungeonPlanner
 ```
