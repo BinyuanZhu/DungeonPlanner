@@ -1,137 +1,154 @@
 /* Ask for an OpenGL Core Context */
-#define GLFW_INCLUDE_NONE  // Macro Redefinition
-#define GL_SILENCE_DEPRECATION  // THERE IS A REASON I AM USING 3.3
+#define GLFW_INCLUDE_NONE
+#define GL_SILENCE_DEPRECATION
 
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
-
 #include <filesystem>
 #include <iostream>
-
 #include "shader.h"
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <random>
 
 namespace fs = std::filesystem;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
-// settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const int GRID_SIZE = 10;
-const float GRID_SPACING = 1.0f;
 
-int main()
-{
+int main() {
+    // Init 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Dungeon Planner", NULL, NULL);
-    if (window == NULL)
-    {
+    // Create window
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Main Menu", NULL, NULL);
+    if (!window) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    
+    // Load GLLoader
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
-
-    // Get relative path 
+    // Get relative path
     fs::path projectRoot = fs::current_path();
-    // Create and compile shaders. First concatenate paths, then convert to string via .c_str
-    Shader gridShader((projectRoot / "src/shaders/vertex.glsl").c_str(), (projectRoot / "src/shaders/fragment.glsl").c_str());
+    Shader menuShader((projectRoot / "src/shaders/vertex.glsl").c_str(), 
+                      (projectRoot / "src/shaders/fragment.glsl").c_str());
 
-    // VBO and VAO
-    unsigned int VAO, VBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
+    // Button 1 (Start) vertices
+    float button1Vertices[] = {
+        300.0f, 325.0f,  // Bottom-left
+        500.0f, 325.0f,  // Bottom-right
+        500.0f, 375.0f,  // Top-right
+        500.0f, 375.0f,  // Top-right
+        300.0f, 375.0f,  // Top-left
+        300.0f, 325.0f   // Bottom-left
+    };
 
-    std::vector<float> vertices;
-    for (int i = 0; i <= GRID_SIZE; ++i)
-    {
-        // Horizontal lines
-        vertices.push_back(-GRID_SIZE / 2.0f);
-        vertices.push_back(i - GRID_SIZE / 2.0f);
-        vertices.push_back(GRID_SIZE / 2.0f);
-        vertices.push_back(i - GRID_SIZE / 2.0f);
+    // Button 2 (Exit) vertices
+    float button2Vertices[] = {
+        300.0f, 225.0f,
+        500.0f, 225.0f,
+        500.0f, 275.0f,
+        500.0f, 275.0f,
+        300.0f, 275.0f,
+        300.0f, 225.0f
+    };
 
-        // Vertical lines
-        vertices.push_back(i - GRID_SIZE / 2.0f);
-        vertices.push_back(-GRID_SIZE / 2.0f);
-        vertices.push_back(i - GRID_SIZE / 2.0f);
-        vertices.push_back(GRID_SIZE / 2.0f);
-    }
+    // Create VAO and VBO
+    unsigned int VAOs[2], VBOs[2];
+    glGenVertexArrays(2, VAOs);
+    glGenBuffers(2, VBOs);
 
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
+    // Start Button
+    glBindVertexArray(VAOs[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(button1Vertices), button1Vertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Unbind
+    // Exit Button
+    glBindVertexArray(VAOs[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(button2Vertices), button2Vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    glm::mat4 projection = glm::ortho(-GRID_SIZE / 2.0f, GRID_SIZE / 2.0f, -GRID_SIZE / 2.0f, GRID_SIZE / 2.0f);
-
-    // Render loop
+    glm::mat4 projection = glm::ortho(0.0f, (float)SCR_WIDTH, 0.0f, (float)SCR_HEIGHT);
+    // Loop
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        // black out screen
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        gridShader.use();
-        gridShader.setMat4("projection", projection);
+        menuShader.use();
+        menuShader.setMat4("projection", projection);
 
-        // Draw grid
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_LINES, 0, vertices.size() / 2);
+        // Draw Start Button (Blue)
+        menuShader.setVec4("ourColor", glm::vec4(0.2f, 0.3f, 0.8f, 1.0f));
+        glBindVertexArray(VAOs[0]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        // Swap buffers and poll IO events
+        // Draw Exit Button (Red)
+        menuShader.setVec4("ourColor", glm::vec4(0.8f, 0.2f, 0.2f, 1.0f));
+        glBindVertexArray(VAOs[1]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // Cleanup
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-
+    glDeleteVertexArrays(2, VAOs);
+    glDeleteBuffers(2, VBOs);
     glfwTerminate();
     return 0;
 }
 
-// CALLBACKS
+// Mouse inputs
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        float ypos_gl = SCR_HEIGHT - ypos;
 
-void processInput(GLFWwindow *window)
-{
+        // Start Button Click (300-500x, 325-375y)
+        if (xpos >= 300 && xpos <= 500 && ypos_gl >= 325 && ypos_gl <= 375) {
+            std::cout << "Starting game..." << std::endl;
+            // Add game initialization here
+        }
+        // Exit Button Click (300-500x, 225-275y)
+        else if (xpos >= 300 && xpos <= 500 && ypos_gl >= 225 && ypos_gl <= 275) {
+            glfwSetWindowShouldClose(window, true);
+        }
+    }
+}
+
+// Key inputs
+void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }

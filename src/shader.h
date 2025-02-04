@@ -74,6 +74,10 @@ public:
         float value[2] = {x, y};
         glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, value);
     }
+    
+    void setVec4(const std::string &name, const glm::vec4 &value) const {
+        glUniform4f(glGetUniformLocation(ID, name.c_str()), value.x, value.y, value.z, value.w);
+    }
 
     void setChar(const std::string &name, int value) const
     {
