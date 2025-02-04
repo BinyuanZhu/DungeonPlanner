@@ -131,12 +131,12 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         glfwGetCursorPos(window, &xpos, &ypos);
         float ypos_gl = SCR_HEIGHT - ypos;
 
-        // Start Button Click (300-500x, 325-375y)
+        // Start Button Click (300-500x, 325-375y) --> Needs to be dynamic
         if (xpos >= 300 && xpos <= 500 && ypos_gl >= 325 && ypos_gl <= 375) {
             std::cout << "Starting game..." << std::endl;
             // Add game initialization here
         }
-        // Exit Button Click (300-500x, 225-275y)
+        // Exit Button Click (300-500x, 225-275y) --> Unecesary, ESC to exit
         else if (xpos >= 300 && xpos <= 500 && ypos_gl >= 225 && ypos_gl <= 275) {
             glfwSetWindowShouldClose(window, true);
         }
@@ -145,6 +145,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 // Key inputs
 void processInput(GLFWwindow *window) {
+    // ESC to exit
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
