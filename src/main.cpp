@@ -17,8 +17,17 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
+// Button struct
+typedef struct {
+    float xMin, xMax, yMin, yMax;
+} Button;
+
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+
+// Butotn pixel locations
+Button startButton = { 300, 500, 325, 375 };
+Button exitButton = { 300, 500, 225, 275 };
 
 int main() {
     // Init 
@@ -51,18 +60,17 @@ int main() {
     Shader menuShader((projectRoot / "src/shaders/vertex.glsl").c_str(), 
                       (projectRoot / "src/shaders/fragment.glsl").c_str());
 
-    // Button 1 (Start) vertices
-    float button1Vertices[] = {
-        300.0f, 325.0f,  // Bottom-left
-        500.0f, 325.0f,  // Bottom-right
-        500.0f, 375.0f,  // Top-right
-        500.0f, 375.0f,  // Top-right
-        300.0f, 375.0f,  // Top-left
-        300.0f, 325.0f   // Bottom-left
-    };
-
-    // Button 2 (Exit) vertices
-    float button2Vertices[] = {
+    // Button vertices
+    float buttonVertices[] = {
+        // Start Button
+        300.0f, 325.0f,
+        500.0f, 325.0f,
+        500.0f, 375.0f,
+        500.0f, 375.0f,
+        300.0f, 375.0f,
+        300.0f, 325.0f,
+        
+        // Exit Button
         300.0f, 225.0f,
         500.0f, 225.0f,
         500.0f, 275.0f,
@@ -71,29 +79,20 @@ int main() {
         300.0f, 225.0f
     };
 
-    // Create VAO and VBO
-    unsigned int VAOs[2], VBOs[2];
-    glGenVertexArrays(2, VAOs);
-    glGenBuffers(2, VBOs);
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
 
-    // Start Button
-    glBindVertexArray(VAOs[0]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(button1Vertices), button1Vertices, GL_STATIC_DRAW);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(buttonVertices), buttonVertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-
-    // Exit Button
-    glBindVertexArray(VAOs[1]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(button2Vertices), button2Vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
     glm::mat4 projection = glm::ortho(0.0f, (float)SCR_WIDTH, 0.0f, (float)SCR_HEIGHT);
+
     // Loop
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -104,24 +103,37 @@ int main() {
         menuShader.use();
         menuShader.setMat4("projection", projection);
 
+        glBindVertexArray(VAO);
+
         // Draw Start Button (Blue)
         menuShader.setVec4("ourColor", glm::vec4(0.2f, 0.3f, 0.8f, 1.0f));
-        glBindVertexArray(VAOs[0]);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         // Draw Exit Button (Red)
         menuShader.setVec4("ourColor", glm::vec4(0.8f, 0.2f, 0.2f, 1.0f));
-        glBindVertexArray(VAOs[1]);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_TRIANGLES, 6, 6);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(2, VAOs);
-    glDeleteBuffers(2, VBOs);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
     glfwTerminate();
     return 0;
+}
+
+// Dynamic button logic
+bool isButtonClicked(Button button, double xpos, double ypos, int width, int height) {
+    float scaleX = (float)width / SCR_WIDTH;
+    float scaleY = (float)height / SCR_HEIGHT;
+    float adjXMin = button.xMin * scaleX;
+    float adjXMax = button.xMax * scaleX;
+    float adjYMin = button.yMin * scaleY;
+    float adjYMax = button.yMax * scaleY;
+
+    float ypos_gl = height - ypos;
+    return (xpos >= adjXMin && xpos <= adjXMax && ypos_gl >= adjYMin && ypos_gl <= adjYMax);
 }
 
 // Mouse inputs
@@ -129,15 +141,13 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
-        float ypos_gl = SCR_HEIGHT - ypos;
 
-        // Start Button Click (300-500x, 325-375y) --> Needs to be dynamic
-        if (xpos >= 300 && xpos <= 500 && ypos_gl >= 325 && ypos_gl <= 375) {
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+
+        if (isButtonClicked(startButton, xpos, ypos, width, height)) {
             std::cout << "Starting game..." << std::endl;
-            // Add game initialization here
-        }
-        // Exit Button Click (300-500x, 225-275y) --> Unecesary, ESC to exit
-        else if (xpos >= 300 && xpos <= 500 && ypos_gl >= 225 && ypos_gl <= 275) {
+        } else if (isButtonClicked(exitButton, xpos, ypos, width, height)) {
             glfwSetWindowShouldClose(window, true);
         }
     }
@@ -145,7 +155,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 // Key inputs
 void processInput(GLFWwindow *window) {
-    // ESC to exit
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
