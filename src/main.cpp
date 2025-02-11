@@ -25,9 +25,11 @@ void processInput(GLFWwindow *window);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_HEIGHT = 800;
 const int GRID_SIZE = 10;
-const float GRID_SPACING = 1.0f;
+const int CELL_SIZE = 72;
+const int GRID_WIDTH = GRID_SIZE * CELL_SIZE;
+const int GRID_HEIGHT = GRID_SIZE * CELL_SIZE;
 
 int main()
 {
@@ -56,7 +58,7 @@ int main()
         return -1;
     }
 
-    // Get relative path 
+    // Get relative path
     fs::path projectRoot = fs::current_path();
     // Create and compile shaders. First concatenate paths, then convert to string via .c_str
     Shader gridShader((projectRoot / "src/shaders/vertex.glsl").c_str(), (projectRoot / "src/shaders/fragment.glsl").c_str());
@@ -70,16 +72,16 @@ int main()
     for (int i = 0; i <= GRID_SIZE; ++i)
     {
         // Horizontal lines
-        vertices.push_back(-GRID_SIZE / 2.0f);
-        vertices.push_back(i - GRID_SIZE / 2.0f);
-        vertices.push_back(GRID_SIZE / 2.0f);
-        vertices.push_back(i - GRID_SIZE / 2.0f);
+        vertices.push_back(0.0f);
+        vertices.push_back(i * CELL_SIZE);
+        vertices.push_back(GRID_WIDTH);
+        vertices.push_back(i * CELL_SIZE);
 
         // Vertical lines
-        vertices.push_back(i - GRID_SIZE / 2.0f);
-        vertices.push_back(-GRID_SIZE / 2.0f);
-        vertices.push_back(i - GRID_SIZE / 2.0f);
-        vertices.push_back(GRID_SIZE / 2.0f);
+        vertices.push_back(i * CELL_SIZE);
+        vertices.push_back(0.0f);
+        vertices.push_back(i * CELL_SIZE);
+        vertices.push_back(GRID_HEIGHT);
     }
 
     glBindVertexArray(VAO);
@@ -93,7 +95,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    glm::mat4 projection = glm::ortho(-GRID_SIZE / 2.0f, GRID_SIZE / 2.0f, -GRID_SIZE / 2.0f, GRID_SIZE / 2.0f);
+    glm::mat4 projection =  glm::ortho(0.0f, (float)GRID_WIDTH, 0.0f, (float)GRID_HEIGHT);
 
     // Render loop
     while (!glfwWindowShouldClose(window)) {
@@ -105,6 +107,16 @@ int main()
 
         gridShader.use();
         gridShader.setMat4("projection", projection);
+
+        // Set viewport to center the grid
+        int windowWidth, windowHeight;
+        glfwGetWindowSize(window, &windowWidth, &windowHeight);
+
+        // Calculate viewport offsets to center the grid
+        int viewportX = (windowWidth - GRID_WIDTH) / 2;
+        int viewportY = (windowHeight - GRID_HEIGHT) / 2;
+
+        glViewport(viewportX, viewportY, GRID_WIDTH, GRID_HEIGHT);
 
         // Draw grid
         glBindVertexArray(VAO);
