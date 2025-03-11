@@ -30,6 +30,38 @@ const int GRID_SIZE = 10;
 const int CELL_SIZE = 72;
 const int GRID_WIDTH = GRID_SIZE * CELL_SIZE;
 const int GRID_HEIGHT = GRID_SIZE * CELL_SIZE;
+// panning
+bool isPanning = false;
+double lastMouseX = 0.0;
+double lastMouseY = 0.0;
+glm::vec2 cameraOffset(0.0f, 0.0f);
+
+// callback functions
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            isPanning = true;
+            glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
+        } else if (action == GLFW_RELEASE) {
+            isPanning = false;
+        }
+    }
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (isPanning) {
+        double deltaX = xpos - lastMouseX;
+        double deltaY = ypos - lastMouseY;
+
+        cameraOffset.x -= (float)deltaX;
+        cameraOffset.y += (float)deltaY; // Invert Y axis
+
+        lastMouseX = xpos;
+        lastMouseY = ypos;
+    }
+}
 
 int main()
 {
@@ -57,6 +89,10 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    // register mouse callbacks
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
     // Get relative path
     fs::path projectRoot = fs::current_path();
@@ -95,6 +131,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    // glm::mat4 projection =  glm::ortho(0.0f, (float)GRID_WIDTH, 0.0f, (float)GRID_HEIGHT);829f3be956b29d937092dee1f
     // gotta add a margin so it doesn't clip the grid
     float margin = 2.0f;
     glm::mat4 projection = glm::ortho(-margin, (float)GRID_WIDTH + margin, -margin, (float)GRID_HEIGHT + margin);
@@ -106,6 +143,16 @@ int main()
         // black out screen
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        gridShader.use();
+
+        float margin = 2.0f;
+        glm::mat4 projection = glm::ortho(
+            -margin + cameraOffset.x,
+            (float)GRID_WIDTH + margin + cameraOffset.x,
+            -margin + cameraOffset.y,
+            (float)GRID_HEIGHT + margin + cameraOffset.y
+        );
 
         gridShader.use();
         gridShader.setMat4("projection", projection);
@@ -132,6 +179,8 @@ int main()
     // Cleanup
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+
+    // cleanup callbacks maybe? idk
 
     glfwTerminate();
     return 0;
