@@ -30,6 +30,38 @@ const int GRID_SIZE = 10;
 const int CELL_SIZE = 72;
 const int GRID_WIDTH = GRID_SIZE * CELL_SIZE;
 const int GRID_HEIGHT = GRID_SIZE * CELL_SIZE;
+// panning
+bool isPanning = false;
+double lastMouseX = 0.0;
+double lastMouseY = 0.0;
+glm::vec2 cameraOffset(0.0f, 0.0f);
+
+// callback functions
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            isPanning = true;
+            glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
+        } else if (action == GLFW_RELEASE) {
+            isPanning = false;
+        }
+    }
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (isPanning) {
+        double deltaX = xpos - lastMouseX;
+        double deltaY = ypos - lastMouseY;
+
+        cameraOffset.x -= (float)deltaX;
+        cameraOffset.y += (float)deltaY; // Invert Y axis
+
+        lastMouseX = xpos;
+        lastMouseY = ypos;
+    }
+}
 
 int main()
 {
@@ -57,6 +89,10 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    // register mouse callbacks
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
     // Get relative path
     fs::path projectRoot = fs::current_path();
@@ -109,6 +145,16 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         gridShader.use();
+
+        float margin = 2.0f;
+        glm::mat4 projection = glm::ortho(
+            -margin + cameraOffset.x,
+            (float)GRID_WIDTH + margin + cameraOffset.x,
+            -margin + cameraOffset.y,
+            (float)GRID_HEIGHT + margin + cameraOffset.y
+        );
+
+        gridShader.use();
         gridShader.setMat4("projection", projection);
 
         // Set viewport to center the grid
@@ -133,6 +179,8 @@ int main()
     // Cleanup
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+
+    // cleanup callbacks maybe? idk
 
     glfwTerminate();
     return 0;
