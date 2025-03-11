@@ -95,7 +95,9 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    glm::mat4 projection =  glm::ortho(0.0f, (float)GRID_WIDTH, 0.0f, (float)GRID_HEIGHT);
+    // gotta add a margin so it doesn't clip the grid
+    float margin = 2.0f;
+    glm::mat4 projection = glm::ortho(-margin, (float)GRID_WIDTH + margin, -margin, (float)GRID_HEIGHT + margin);
 
     // Render loop
     while (!glfwWindowShouldClose(window)) {
